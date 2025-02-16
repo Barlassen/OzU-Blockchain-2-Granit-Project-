@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from './constants';
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from './constants/index.js';
 import './App.css';
 
 function App() {
@@ -26,6 +26,7 @@ function App() {
           signer
         );
         setContract(buildingContract);
+        console.log(buildingContract);
       } catch (error) {
         console.error('Cüzdan bağlantısı başarısız:', error);
       }
@@ -37,7 +38,6 @@ function App() {
       if (!contract || !buildingId) return;
       
       const tx = await contract.registerHouseNFT(
-        buildingId,
         true, // excavationAndFoundation
         true, // roughConstruction
         true, // roofConstruction
@@ -69,10 +69,17 @@ function App() {
     <div className="App">
       <header className="App-header">
         {!account ? (
-          <button onClick={connectWallet}>Cüzdanı Bağla</button>
+          <div>
+            <h1 className="welcome-title">Granit'e Hoşgeldiniz</h1>
+            <button className="connect-button" onClick={connectWallet}>
+              Cüzdanı Bağla
+            </button>
+          </div>
         ) : (
           <div>
-            <p>Bağlı Cüzdan: {account}</p>
+            <div className="wallet-info">
+              <p>Bağlı Cüzdan: {account}</p>
+            </div>
             
             <div className="building-form">
               <input 
@@ -84,19 +91,44 @@ function App() {
                 max="999"
               />
               
-              <button onClick={registerNewBuilding}>
+              <button className="action-button" onClick={registerNewBuilding}>
                 Yeni Bina Kaydet
               </button>
               
-              <button onClick={getBuildingData}>
+              <button className="action-button" onClick={getBuildingData}>
                 Bina Verilerini Getir
               </button>
               
               {buildingData && (
                 <div className="building-data">
                   <h3>Bina Bilgileri:</h3>
-                  <p>İnşaat Tamamlandı: {buildingData.build.constructionCompleted ? 'Evet' : 'Hayır'}</p>
-                  <p>NFT Basıldı: {buildingData.minted ? 'Evet' : 'Hayır'}</p>
+                  
+                  <div className="building-details">
+                    <h4>İnşaat Aşamaları:</h4>
+                    <p>Hafriyat ve Temel: {buildingData.build.excavationAndFoundation ? '✅' : '❌'}</p>
+                    <p>Kaba İnşaat: {buildingData.build.roughConstruction ? '✅' : '❌'}</p>
+                    <p>Çatı Yapımı: {buildingData.build.roofConstruction ? '✅' : '❌'}</p>
+                    <p>İnce İşler: {buildingData.build.finishingWorks ? '✅' : '❌'}</p>
+                    <p>Kapı/Pencere/İzolasyon: {buildingData.build.doorWindowInsulation ? '✅' : '❌'}</p>
+                    <p>Güvenlik ve Ortak Alanlar: {buildingData.build.securityAndCommonAreas ? '✅' : '❌'}</p>
+                    
+                    <h4>İnşaat Sonrası Aşamalar:</h4>
+                    <p>Denetim: {buildingData.post.inspection ? '✅' : '❌'}</p>
+                    <p>Final Onayı: {buildingData.post.finalApproval ? '✅' : '❌'}</p>
+                    <p>İç Mekan İşleri: {buildingData.post.interiorWorksCompleted ? '✅' : '❌'}</p>
+                    <p>Dış Mekan İşleri: {buildingData.post.exteriorWorksCompleted ? '✅' : '❌'}</p>
+                    <p>Yasal Evraklar: {buildingData.post.legalPaperwork ? '✅' : '❌'}</p>
+                    <p>Final Teslim: {buildingData.post.finalHandover ? '✅' : '❌'}</p>
+
+                    <h4>Genel Durum:</h4>
+                    <p>İnşaat Tamamlandı: {buildingData.build.constructionCompleted ? '✅' : '❌'}</p>
+                    <p>NFT Basıldı: {buildingData.minted ? '✅' : '❌'}</p>
+                    <p>Bina ID: #{buildingId}</p>
+                  </div>
+
+                  <button className="nft-button" disabled>
+                    Bina bilgilerini içeren NFT
+                  </button>
                 </div>
               )}
             </div>

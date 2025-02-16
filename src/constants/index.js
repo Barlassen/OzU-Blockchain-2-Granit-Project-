@@ -1,7 +1,6 @@
-export const CONTRACT_ADDRESS = "0x7EF2e0048f5bAeDe046f6BF797943daF4ED8CB47";
+export const CONTRACT_ADDRESS = "0xCE379162947221eD7f36e0dabc8724bD94e6c50D";
 
-export const CONTRACT_ABI = [
-	
+export const CONTRACT_ABI = 
     [
         {
             "anonymous": false,
@@ -269,5 +268,4 @@ export const CONTRACT_ABI = [
             "stateMutability": "view",
             "type": "function"
         }
-    ]
-]; 
+    ]; 
