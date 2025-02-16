@@ -1,16 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
-import { CONTRACT_ADDRESS, CONTRACT_ABI } from './constants/index.js';
+import { CONTRACT_ADDRESS, CONTRACT_ABI } from './constants/abi.js';
 import './App.css';
 
 function App() {
   const [account, setAccount] = useState('');
   const [contract, setContract] = useState(null);
   const [buildingId, setBuildingId] = useState('');
+  const [inputBuildingId, setInputBuildingId] = useState('');
   const [buildingData, setBuildingData] = useState(null);
+  const [isMinting, setIsMinting] = useState(false);
 
   const connectWallet = async () => {
     if (window.ethereum) {
+      try {
+        // Önce Sepolia ağına geçiş yapalım
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0xaa36a7' }], // Sepolia chainId
+        });
+      } catch (switchError) {
+        // Eğer ağ henüz eklenmemişse, ekleyelim
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0xaa36a7',
+                chainName: 'Sepolia Test Network',
+                nativeCurrency: {
+                  name: 'SepoliaETH',
+                  symbol: 'SepoliaETH',
+                  decimals: 18
+                },
+                rpcUrls: ['https://sepolia.infura.io/v3/'],
+                blockExplorerUrls: ['https://sepolia.etherscan.io']
+              }]
+            });
+          } catch (addError) {
+            console.error('Ağ ekleme hatası:', addError);
+            return;
+          }
+        }
+      }
+
       try {
         const accounts = await window.ethereum.request({
           method: 'eth_requestAccounts'
@@ -18,7 +51,6 @@ function App() {
         setAccount(accounts[0]);
         
         const provider = new ethers.BrowserProvider(window.ethereum);
-
         const signer = await provider.getSigner();
         const buildingContract = new ethers.Contract(
           CONTRACT_ADDRESS,
@@ -26,16 +58,29 @@ function App() {
           signer
         );
         setContract(buildingContract);
-        console.log(buildingContract);
+        console.log("Cüzdan bağlandı:", accounts[0]);
+        console.log("Kontrat bağlandı:", buildingContract.address);
       } catch (error) {
-        console.error('Cüzdan bağlantısı başarısız:', error);
+        console.error('Cüzdan bağlantı hatası:', error);
       }
+    } else {
+      alert('Lütfen MetaMask yükleyin!');
     }
   };
 
   const registerNewBuilding = async () => {
     try {
-      if (!contract || !buildingId) return;
+      if (!contract) {
+        alert('Lütfen önce cüzdanınızı bağlayın!');
+        return;
+      }
+      
+      if (!inputBuildingId) {
+        alert('Lütfen bir Bina ID girin!');
+        return;
+      }
+
+      console.log('Bina kaydı başlatılıyor...', inputBuildingId);
       
       const tx = await contract.registerHouseNFT(
         true, // excavationAndFoundation
@@ -46,24 +91,74 @@ function App() {
         true  // securityAndCommonAreas
       );
       
+      console.log('İşlem gönderildi:', tx.hash);
+      
       await tx.wait();
+      console.log('İşlem tamamlandı');
+      
+      setBuildingId(inputBuildingId);
       alert('Bina başarıyla kaydedildi!');
+      
+      // Yeni binanın verilerini otomatik olarak getir
+      await getBuildingData();
     } catch (error) {
       console.error('Kayıt hatası:', error);
-      alert('Kayıt sırasında bir hata oluştu');
+      if (error.code === 'ACTION_REJECTED') {
+        alert('İşlem kullanıcı tarafından reddedildi');
+      } else {
+        alert('Kayıt sırasında bir hata oluştu: ' + error.message);
+      }
     }
   };
 
   const getBuildingData = async () => {
     try {
-      if (!contract || !buildingId) return;
+      if (!contract || !inputBuildingId) return;
       
-      const data = await contract.houses(buildingId);
+      setBuildingId(inputBuildingId);
+      const data = await contract.houses(inputBuildingId);
       setBuildingData(data);
     } catch (error) {
       console.error('Veri çekme hatası:', error);
     }
   };
+
+  const mintBuildingNFT = async () => {
+    try {
+      if (!contract || !buildingId) return;
+      
+      setIsMinting(true);
+      const tx = await contract.registerHouseNFT(
+        buildingData.build.excavationAndFoundation,
+        buildingData.build.roughConstruction,
+        buildingData.build.roofConstruction,
+        buildingData.build.finishingWorks,
+        buildingData.build.doorWindowInsulation,
+        buildingData.build.securityAndCommonAreas
+      );
+      
+      await tx.wait();
+      alert('NFT başarıyla mint edildi!');
+      await getBuildingData(); // Verileri güncelle
+    } catch (error) {
+      console.error('Mint hatası:', error);
+      alert('NFT mint işlemi sırasında bir hata oluştu');
+    } finally {
+      setIsMinting(false);
+    }
+  };
+
+  useEffect(() => {
+    // Sayfa yüklendiğinde MetaMask bağlantısını kontrol et
+    if (window.ethereum) {
+      window.ethereum.request({ method: 'eth_accounts' })
+        .then(accounts => {
+          if (accounts.length > 0) {
+            connectWallet();
+          }
+        });
+    }
+  }, []);
 
   return (
     <div className="App">
@@ -82,52 +177,137 @@ function App() {
             </div>
             
             <div className="building-form">
-              <input 
-                type="number" 
-                placeholder="Bina ID (100-999)"
-                value={buildingId}
-                onChange={(e) => setBuildingId(e.target.value)}
-                min="100"
-                max="999"
-              />
+              <div className="input-group">
+                <input 
+                  type="number" 
+                  placeholder="Bina ID (1-999)"
+                  value={inputBuildingId}
+                  onChange={(e) => setInputBuildingId(e.target.value)}
+                  min="1"
+                  max="999"
+                />
+              </div>
               
-              <button className="action-button" onClick={registerNewBuilding}>
-                Yeni Bina Kaydet
-              </button>
-              
-              <button className="action-button" onClick={getBuildingData}>
-                Bina Verilerini Getir
-              </button>
+              <div className="button-group">
+                <button className="action-button" onClick={registerNewBuilding}>
+                  Yeni Bina Kaydet
+                </button>
+                
+                <button className="action-button" onClick={getBuildingData}>
+                  Bina Verilerini Getir
+                </button>
+              </div>
               
               {buildingData && (
                 <div className="building-data">
-                  <h3>Bina Bilgileri:</h3>
+                  <div className="granit-header">
+                    <h1>GRANIT</h1>
+                    <p>Bina Takip Sistemi</p>
+                  </div>
+                  
+                  <h3>Bina Detaylı Bilgileri</h3>
                   
                   <div className="building-details">
-                    <h4>İnşaat Aşamaları:</h4>
-                    <p>Hafriyat ve Temel: {buildingData.build.excavationAndFoundation ? '✅' : '❌'}</p>
-                    <p>Kaba İnşaat: {buildingData.build.roughConstruction ? '✅' : '❌'}</p>
-                    <p>Çatı Yapımı: {buildingData.build.roofConstruction ? '✅' : '❌'}</p>
-                    <p>İnce İşler: {buildingData.build.finishingWorks ? '✅' : '❌'}</p>
-                    <p>Kapı/Pencere/İzolasyon: {buildingData.build.doorWindowInsulation ? '✅' : '❌'}</p>
-                    <p>Güvenlik ve Ortak Alanlar: {buildingData.build.securityAndCommonAreas ? '✅' : '❌'}</p>
-                    
-                    <h4>İnşaat Sonrası Aşamalar:</h4>
-                    <p>Denetim: {buildingData.post.inspection ? '✅' : '❌'}</p>
-                    <p>Final Onayı: {buildingData.post.finalApproval ? '✅' : '❌'}</p>
-                    <p>İç Mekan İşleri: {buildingData.post.interiorWorksCompleted ? '✅' : '❌'}</p>
-                    <p>Dış Mekan İşleri: {buildingData.post.exteriorWorksCompleted ? '✅' : '❌'}</p>
-                    <p>Yasal Evraklar: {buildingData.post.legalPaperwork ? '✅' : '❌'}</p>
-                    <p>Final Teslim: {buildingData.post.finalHandover ? '✅' : '❌'}</p>
+                    <div className="building-header">
+                      <h2>Bina #{buildingId}</h2>
+                      <span className={`status ${buildingData.build.constructionCompleted ? 'completed' : 'in-progress'}`}>
+                        {buildingData.build.constructionCompleted ? 'Tamamlandı' : 'Devam Ediyor'}
+                      </span>
+                    </div>
 
-                    <h4>Genel Durum:</h4>
-                    <p>İnşaat Tamamlandı: {buildingData.build.constructionCompleted ? '✅' : '❌'}</p>
-                    <p>NFT Basıldı: {buildingData.minted ? '✅' : '❌'}</p>
-                    <p>Bina ID: #{buildingId}</p>
+                    <div className="details-grid">
+                      <div className="details-section">
+                        <h4>🏗️ İnşaat Aşamaları</h4>
+                        <div className="phase-list">
+                          <p>
+                            <span>1. Hafriyat ve Temel</span>
+                            <span className="status-icon">{buildingData.build.excavationAndFoundation ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>2. Kaba İnşaat</span>
+                            <span className="status-icon">{buildingData.build.roughConstruction ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>3. Çatı Yapımı</span>
+                            <span className="status-icon">{buildingData.build.roofConstruction ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>4. İnce İşler</span>
+                            <span className="status-icon">{buildingData.build.finishingWorks ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>5. Kapı/Pencere/İzolasyon</span>
+                            <span className="status-icon">{buildingData.build.doorWindowInsulation ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>6. Güvenlik ve Ortak Alanlar</span>
+                            <span className="status-icon">{buildingData.build.securityAndCommonAreas ? '✅' : '❌'}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="details-section">
+                        <h4>📋 İnşaat Sonrası Kontroller</h4>
+                        <div className="phase-list">
+                          <p>
+                            <span>1. Denetim</span>
+                            <span className="status-icon">{buildingData.post.inspection ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>2. Final Onayı</span>
+                            <span className="status-icon">{buildingData.post.finalApproval ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>3. İç Mekan İşleri</span>
+                            <span className="status-icon">{buildingData.post.interiorWorksCompleted ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>4. Dış Mekan İşleri</span>
+                            <span className="status-icon">{buildingData.post.exteriorWorksCompleted ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>5. Yasal Evraklar</span>
+                            <span className="status-icon">{buildingData.post.legalPaperwork ? '✅' : '❌'}</span>
+                          </p>
+                          <p>
+                            <span>6. Final Teslim</span>
+                            <span className="status-icon">{buildingData.post.finalHandover ? '✅' : '❌'}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="details-section summary">
+                        <h4>📊 Özet Bilgiler</h4>
+                        <div className="summary-grid">
+                          <div className="summary-item">
+                            <span>NFT Durumu</span>
+                            <span className={`status ${buildingData.minted ? 'completed' : 'pending'}`}>
+                              {buildingData.minted ? 'Basıldı' : 'Beklemede'}
+                            </span>
+                          </div>
+                          <div className="summary-item">
+                            <span>İnşaat Durumu</span>
+                            <span className={`status ${buildingData.build.constructionCompleted ? 'completed' : 'in-progress'}`}>
+                              {buildingData.build.constructionCompleted ? 'Tamamlandı' : 'Devam Ediyor'}
+                            </span>
+                          </div>
+                          <div className="summary-item">
+                            <span>Bina ID</span>
+                            <span className="id">#{buildingId}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <button className="nft-button" disabled>
-                    Bina bilgilerini içeren NFT
+                  <button 
+                    className={`nft-button ${buildingData.minted ? 'minted' : ''}`}
+                    onClick={mintBuildingNFT}
+                    disabled={buildingData.minted || !buildingData.build.constructionCompleted || isMinting}
+                  >
+                    {isMinting ? 'NFT Mint Ediliyor...' : 
+                     buildingData.minted ? 'NFT Mint Edildi' : 
+                     'NFT Mint Et'}
                   </button>
                 </div>
               )}

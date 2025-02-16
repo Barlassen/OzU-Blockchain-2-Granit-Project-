@@ -57,8 +57,7 @@
   border: 1px solid #FFD700;
   margin-top: 2rem;
   width: 100%;
-  max-width: 500px;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+  max-width: 1200px;
 }
 
 .wallet-info {
@@ -137,19 +136,39 @@ input::placeholder {
   border-radius: 8px;
   color: #FFD700;
   font-weight: bold;
-  cursor: not-allowed;
+  cursor: pointer;
   width: 100%;
   transition: all 0.3s ease;
-  opacity: 0.8;
 }
 
-.nft-button:hover {
-  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+.nft-button:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+  background: linear-gradient(45deg, #1a1a1a, #2c2c2c);
 }
 
 .nft-button:disabled {
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: 0.6;
+  border-color: #666;
+  color: #666;
+}
+
+.nft-button.minted {
+  background: linear-gradient(45deg, #006400, #008000);
+  border-color: #00ff00;
+  color: #fff;
+  cursor: default;
+}
+
+@keyframes mintingAnimation {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.nft-button:disabled:not(.minted) {
+  animation: mintingAnimation 1.5s infinite;
 }
 
 .building-details {
@@ -181,4 +200,167 @@ input::placeholder {
 
 .building-details p:last-child {
   border-bottom: none;
+}
+
+.building-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #FFD700;
+}
+
+.building-header h2 {
+  color: #FFD700;
+  margin: 0;
+  font-size: 2rem;
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.details-section {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  height: fit-content;
+}
+
+.details-section h4 {
+  color: #FFD700;
+  margin: 0 0 1.5rem 0;
+  font-size: 1.3rem;
+  border-bottom: 1px solid #FFD700;
+  padding-bottom: 0.5rem;
+}
+
+.phase-list p {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.1);
+  color: #fff;
+}
+
+.status {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.completed {
+  background: rgba(0, 255, 0, 0.2);
+  color: #00ff00;
+  border: 1px solid #00ff00;
+}
+
+.in-progress {
+  background: rgba(255, 165, 0, 0.2);
+  color: #ffa500;
+  border: 1px solid #ffa500;
+}
+
+.pending {
+  background: rgba(255, 0, 0, 0.2);
+  color: #ff0000;
+  border: 1px solid #ff0000;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  color: #fff;
+}
+
+.status-icon {
+  font-size: 1.2rem;
+}
+
+.id {
+  color: #FFD700;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+/* Mobil görünüm için responsive tasarım */
+@media (max-width: 1200px) {
+  .details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .building-form {
+    max-width: 500px;
+  }
+}
+
+/* Input ve butonları yan yana yerleştirme */
+.input-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.input-group input {
+  flex: 1;
+  margin: 0;
+}
+
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.button-group .action-button {
+  flex: 1;
+  margin: 0;
+}
+
+.granit-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #FFD700;
+}
+
+.granit-header h1 {
+  font-size: 3rem;
+  color: #FFD700;
+  margin: 0;
+  font-family: 'Arial Black', sans-serif;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+  letter-spacing: 5px;
+}
+
+.granit-header p {
+  color: #FFA500;
+  font-size: 1.2rem;
+  margin: 0.5rem 0 0 0;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
 }
